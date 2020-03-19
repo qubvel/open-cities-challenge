@@ -21,6 +21,7 @@ from .datasets import TestSegmentationDataset
 
 
 class EnsembleModel(torch.nn.Module):
+    """Ensemble of torch models, pass tensor through all models and average results"""
 
     def __init__(self, models: list):
         super().__init__()
@@ -40,8 +41,8 @@ class EnsembleModel(torch.nn.Module):
 
 def model_from_config(path: str):
     """Create model from configuration specified in config file and load checkpoint weights"""
-    cfg = addict.Dict(parse_config(config=path))
-    init_params = cfg.model.init_params
+    cfg = addict.Dict(parse_config(config=path))  # read and parse config file
+    init_params = cfg.model.init_params  # extract model initialization parameters
     init_params["encoder_weights"] = None  # because we will load pretrained weights for whole model
     model = getters.get_model(architecture=cfg.model.architecture, init_params=init_params)
     checkpoint_path = os.path.join(cfg.logdir, "checkpoints", "best.pth")
@@ -51,11 +52,14 @@ def model_from_config(path: str):
 
 
 def read_tile(src_path, x, y, size):
+    """Read square tile from big tif file according to specified coordinates (x, y) and spatial size"""
     with rasterio.open(src_path) as f:
         return f.read(window=Window(x, y, size, size)), f.profile
 
 
 def write_tile(dst_path, tile, profile, **kwargs):
+    """Save tile to disk"""
+    # save tile with shape 1024x1024 because this is initial size of test images
     profile.update(dict(height=1024, width=1024, NBITS=1, count=1))
     profile.update(**kwargs)
     with rasterio.open(dst_path, "w", **profile) as dst:
@@ -63,6 +67,7 @@ def write_tile(dst_path, tile, profile, **kwargs):
 
 
 def slice_to_tiles(args):
+    """Slice big tif file to small tiles"""
     src_dir, dst_dir, row = args
     src_path = os.path.join(src_dir, str(row.cluster_id).zfill(3) + '.tif')
     tile, profile = read_tile(src_path, row.x * row.tile_size, row.y * row.tile_size, row.tile_size)
@@ -92,12 +97,16 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Available devices:", device)
 
+    # loading trained models
     models = [model_from_config(config_path) for config_path in args.configs]
+
+    # create ensemble
     model = EnsembleModel(models)
 
-    # # add tta
+    # add test time augmentations (flipping and rotating input image)
     model = ttach.SegmentationTTAWrapper(model, ttach.aliases.d4_transform(), merge_mode='mean')
 
+    # create Multi GPU model if number of GPUs is more than one
     n_gpus = len(args.gpu.split(","))
     if n_gpus > 1:
         gpus = list(range(n_gpus))
@@ -126,7 +135,7 @@ def main(args):
         _dst_path = os.path.join(dst_stitch_dir, filename)
         predictor(_src_path, _dst_path)
 
-    # # slice files
+    # slice files
     df = pd.read_csv(args.test_csv)
     df = df[df.cluster_id != -1]
     cluster_ids = df.cluster_id.unique()

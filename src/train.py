@@ -130,11 +130,6 @@ def main(cfg):
     print('Defining callbacks..')
     callbacks = []
 
-    # add callbacks from config
-    for cb in cfg.training.callbacks.values():
-        print(cb.init_params)
-        callbacks.append(getters.get_callback(cb.name, cb.init_params))
-
     # add scheduler callback
     if scheduler is not None:
         callbacks.append(training.callbacks.Scheduler(scheduler))

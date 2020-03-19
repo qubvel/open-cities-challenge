@@ -2,7 +2,6 @@ import torch.nn as nn
 import segmentation_models_pytorch as smp
 from .training import losses, metrics, optimizers, callbacks
 from . import datasets
-from . import models
 
 
 def get_model(architecture, init_params):
