@@ -1,7 +1,7 @@
 # My ignores
 .idea/
-data/
-data-old/
+./data/
+./data-old/
 logs/
 debug/
 output/

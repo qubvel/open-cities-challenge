@@ -1,5 +1,16 @@
 {   
-    // execute `ssh -NL localhost:23751:/var/run/docker.sock aurora` to work remotely
+    // execute `ssh -NL localhost:23751:/var/run/docker.sock gpunode` to work remotely
     // or comment line below
-    "docker.host": "tcp://localhost:23751"
+    "docker.host": "tcp://localhost:23751",
+
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/data-old/": true,
+    },
+    
+    "files.exclude": {
+        "**/*.pyc": {"when": "$(basename).py"},
+        "**/__pycache__": true
+    }
 }
