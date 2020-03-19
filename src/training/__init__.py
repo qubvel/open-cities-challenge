@@ -5,6 +5,5 @@ from . import (
     losses,
     metrics,
     optimizers,
-    tta,
     predictor,
 )

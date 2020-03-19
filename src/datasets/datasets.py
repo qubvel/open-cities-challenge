@@ -68,11 +68,9 @@ class SegmentationDataset(Dataset):
 
 class TestSegmentationDataset(Dataset):
 
-    def __init__(self, images_dir, transform_name=None, ids=None):
+    def __init__(self, images_dir, transform_name=None):
         super().__init__()
-        self.paths = list(glob.glob(os.path.join(images_dir, '*/*.tif')))
-        self.ids = [os.path.basename(p) for p in self.paths] if ids is None else ids
-        self._id2path = {os.path.basename(p): p for p in self.paths}
+        self.ids = os.listdir(iamges_dir)
         self.images_dir = images_dir
         self.transform = transforms.__dict__[transform_name] if transform_name else None
 
@@ -81,10 +79,11 @@ class TestSegmentationDataset(Dataset):
 
     def __getitem__(self, i):
         id = self.ids[i]
+        path = os.path.join(self.images_dir, id)
 
         sample = dict(
             id=id,
-            image=self.read_image(self._id2path[id]),
+            image=self.read_image(path),
         )
 
         if self.transform is not None:
@@ -97,8 +96,3 @@ class TestSegmentationDataset(Dataset):
             image = f.read()[:3]
         image = image.transpose(1, 2, 0)
         return image
-
-    def read_image_profile(self, id):
-        path = self._id2path[id]
-        with rasterio.open(path) as f:
-            return f.profile

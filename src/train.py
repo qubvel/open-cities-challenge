@@ -184,5 +184,4 @@ if __name__ == "__main__":
         print(f"Config saved to: {logdir}")
 
     main(cfg)
-
     os._exit(0)

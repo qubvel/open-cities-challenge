@@ -19,10 +19,6 @@ from . import getters
 from .training.predictor import TorchTifPredictor
 from .datasets import TestSegmentationDataset
 
-TEST_STITCHED_DIR = "data/test_stitched/v1"
-TEST_DIR = "data/test/"
-TEST_CSV = "data/test_mosaic_full.csv"
-
 
 class EnsembleModel(torch.nn.Module):
 
@@ -77,12 +73,16 @@ def slice_to_tiles(args):
 def main(args):
     # set GPUS
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    
+    # define where stithced and not stitched test data is located
+    src_sliced_dir = os.path.join(args.test_dir, "sliced")
+    src_stitched_dir = os.path.join(args.test_dir, "stitched")
 
-    # prepare dirs
+    # prepare output (prediction) dirs
     dst_sliced_dir = os.path.join(args.dst_dir, "sliced")
-    os.makedirs(dst_sliced_dir, exist_ok=True)
-
     dst_stitch_dir = os.path.join(args.dst_dir, "stitched")
+
+    os.makedirs(dst_sliced_dir, exist_ok=True)
     os.makedirs(dst_stitch_dir, exist_ok=True)
 
     # --------------------------------------------------
@@ -120,14 +120,14 @@ def main(args):
         blockxsize=256, blockysize=256, tiled=True, BIGTIFF='IF_NEEDED',
     )
 
-    filesnames = os.listdir(TEST_STITCHED_DIR)
+    filesnames = os.listdir(src_stitched_dir)
     for filename in filesnames:
-        _src_path = os.path.join(TEST_STITCHED_DIR, filename)
+        _src_path = os.path.join(src_stitched_dir, filename)
         _dst_path = os.path.join(dst_stitch_dir, filename)
         predictor(_src_path, _dst_path)
 
     # # slice files
-    df = pd.read_csv(TEST_CSV)
+    df = pd.read_csv(args.test_csv)
     df = df[df.cluster_id != -1]
     cluster_ids = df.cluster_id.unique()
     for id in cluster_ids:
@@ -138,19 +138,14 @@ def main(args):
                 for _ in pp:
                     pass
 
-    # predict another data
-    df = pd.read_csv(TEST_CSV)
-    ids = df[df.cluster_id == -1].id.values
-
-    test_dataset = TestSegmentationDataset(TEST_DIR, transform_name='test_transform_1', ids=ids)
-
+    # predict not stitched data
+    test_dataset = TestSegmentationDataset(src_sliced_dir, transform_name='test_transform_1')
     test_dataloader = torch.utils.data.DataLoader(
         test_dataset, batch_size=args.batch_size, pin_memory=True, num_workers=8,
     )
 
     for batch in tqdm(test_dataloader):
         ids = batch['id']
-
         predictions = runner.predict_on_batch(batch)['mask']
 
         for image_id, prediction in zip(ids, predictions):
@@ -162,15 +157,14 @@ def main(args):
 
 if __name__ == "__main__":
     
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--configs', nargs="+", required=True, type=str)
+    parser.add_argument('--test_dir', type=str, required=True)
+    parser.add_argument('--test_csv', type=str, required=True)
     parser.add_argument('--dst_dir', type=str, required=True)
-    parser.add_argument('--gpu', type=str, default='0')
     parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--gpu', type=str, default='0')
     args = parser.parse_args()
-    print(args)
 
     main(args)
-
     os._exit(0)
