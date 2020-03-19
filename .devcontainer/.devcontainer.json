@@ -1,0 +1,39 @@
+{
+	"name": "Open Cities",
+    "image": "open-cities:0.1",
+    "workspaceMount": "source=remote-workspace,target=/workspace,type=volume",
+	"workspaceFolder": "/workspace",
+
+	// Use 'settings' to set *default* container specific settings.json values on container create. 
+	// You can edit these settings after create using File > Preferences > Settings > Remote.
+	"settings": { 
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"python.pythonPath": "/usr/conda/bin/python",
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": true,
+		"python.linting.pylintPath": "/usr/local/share/pip-global/bin/pylint"
+	},
+
+	// Use 'appPort' to create a container with published ports. If the port isn't working, be sure
+	// your server accepts connections from all interfaces (0.0.0.0 or '*'), not just localhost.
+	// "appPort": [ 9000 ],
+
+	// Install flask and any other dependencies
+	"postCreateCommand": "pip install -r requirements.txt",
+
+	// Comment out next line to run as root
+	//"remoteUser": "user",
+
+	// Add the IDs of extensions you want installed when the container is created in the array below.
+	"extensions": [
+		"ms-python.python",
+	],
+
+	// starting args
+	"runArgs": [
+        "--runtime=nvidia",
+        "--ipc=host",
+        "-v /data_rw/competitions/open_cities/:/workspace/old-data/",
+        "-v /data_rw/competitions/open_cities_refactor/:/workspace/data/",
+    ]
+}

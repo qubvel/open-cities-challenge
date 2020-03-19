@@ -1,0 +1,8 @@
+torch==1.1.0
+torchvision==0.3.0
+segmentation-models-pytorch==0.1.0
+tensorflow==1.11.0  # for tensorboard
+tensorboard==1.11.0
+albumentations==0.4.3
+aeronet==0.0.7
+scikit-learn==0.22.2

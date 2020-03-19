@@ -1,0 +1,5 @@
+{   
+    // execute `ssh -NL localhost:23751:/var/run/docker.sock aurora` to work remotely
+    // or comment line below
+    "docker.host": "tcp://localhost:23751"
+}
