@@ -1,0 +1,176 @@
+import os
+import fire
+import ttach
+import torch
+import addict
+import argparse
+import rasterio
+import pandas as pd
+
+from tqdm import tqdm
+from multiprocessing import Pool
+
+from rasterio.windows import Window
+
+from .training.runner import GPUNormRunner
+from .training.config import parse_config
+
+from . import getters
+from .training.predictor import TorchTifPredictor
+from .datasets import TestSegmentationDataset
+
+TEST_STITCHED_DIR = "data/test_stitched/v1"
+TEST_DIR = "data/test/"
+TEST_CSV = "data/test_mosaic_full.csv"
+
+
+class EnsembleModel(torch.nn.Module):
+
+    def __init__(self, models: list):
+        super().__init__()
+        self.models = torch.nn.ModuleList(models)
+
+    def forward(self, x):
+        result = None
+        for model in self.models:
+            y = model(x)
+            if result is None:
+                result = y
+            else:
+                result += y
+        result /= torch.tensor(len(self.models)).to(result.device)
+        return result
+
+
+def model_from_config(path: str):
+    """Create model from configuration specified in config file and load checkpoint weights"""
+    cfg = addict.Dict(parse_config(config=path))
+    init_params = cfg.model.init_params
+    init_params["encoder_weights"] = None  # because we will load pretrained weights for whole model
+    model = getters.get_model(architecture=cfg.model.architecture, init_params=init_params)
+    checkpoint_path = os.path.join(cfg.logdir, "checkpoints", "best.pth")
+    state_dict = torch.load(checkpoint_path)["state_dict"]
+    model.load_state_dict(state_dict)
+    return model
+
+
+def read_tile(src_path, x, y, size):
+    with rasterio.open(src_path) as f:
+        return f.read(window=Window(x, y, size, size)), f.profile
+
+
+def write_tile(dst_path, tile, profile, **kwargs):
+    profile.update(dict(height=1024, width=1024, NBITS=1, count=1))
+    profile.update(**kwargs)
+    with rasterio.open(dst_path, "w", **profile) as dst:
+        dst.write(tile)
+
+
+def slice_to_tiles(args):
+    src_dir, dst_dir, row = args
+    src_path = os.path.join(src_dir, str(row.cluster_id).zfill(3) + '.tif')
+    tile, profile = read_tile(src_path, row.x * row.tile_size, row.y * row.tile_size, row.tile_size)
+    dst_path = os.path.join(dst_dir, row.id)
+    write_tile(dst_path, tile, profile)
+
+
+def main(args):
+    # set GPUS
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+    # prepare dirs
+    dst_sliced_dir = os.path.join(args.dst_dir, "sliced")
+    os.makedirs(dst_sliced_dir, exist_ok=True)
+
+    dst_stitch_dir = os.path.join(args.dst_dir, "stitched")
+    os.makedirs(dst_stitch_dir, exist_ok=True)
+
+    # --------------------------------------------------
+    # define model
+    # --------------------------------------------------
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Available devices:", device)
+
+    models = [model_from_config(config_path) for config_path in args.configs]
+    model = EnsembleModel(models)
+
+    # # add tta
+    model = ttach.SegmentationTTAWrapper(model, ttach.aliases.d4_transform(), merge_mode='mean')
+
+    n_gpus = len(args.gpu.split(","))
+    if n_gpus > 1:
+        gpus = list(range(n_gpus))
+        model = torch.nn.DataParallel(model, gpus)
+
+    print("Done loading...")
+    model.to(device)
+
+    # --------------------------------------------------
+    # start evaluation
+    # --------------------------------------------------
+    runner = GPUNormRunner(model, model_device=device)
+    model.eval()
+
+    # predict big tif files
+    predictor = TorchTifPredictor(
+        runner=runner, sample_size=1024, cut_edge=256,
+        batch_size=args.batch_size,
+        count=1, NBITS=1, compress=None, driver="GTiff",
+        blockxsize=256, blockysize=256, tiled=True, BIGTIFF='IF_NEEDED',
+    )
+
+    filesnames = os.listdir(TEST_STITCHED_DIR)
+    for filename in filesnames:
+        _src_path = os.path.join(TEST_STITCHED_DIR, filename)
+        _dst_path = os.path.join(dst_stitch_dir, filename)
+        predictor(_src_path, _dst_path)
+
+    # # slice files
+    df = pd.read_csv(TEST_CSV)
+    df = df[df.cluster_id != -1]
+    cluster_ids = df.cluster_id.unique()
+    for id in cluster_ids:
+        _df = df[df.cluster_id == id]
+        _args = [(dst_stitch_dir, dst_sliced_dir, row) for i, row in _df.iterrows()]
+        with Pool(12) as p:
+            with tqdm(p.imap(slice_to_tiles, _args), total=len(_args)) as pp:
+                for _ in pp:
+                    pass
+
+    # predict another data
+    df = pd.read_csv(TEST_CSV)
+    ids = df[df.cluster_id == -1].id.values
+
+    test_dataset = TestSegmentationDataset(TEST_DIR, transform_name='test_transform_1', ids=ids)
+
+    test_dataloader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=args.batch_size, pin_memory=True, num_workers=8,
+    )
+
+    for batch in tqdm(test_dataloader):
+        ids = batch['id']
+
+        predictions = runner.predict_on_batch(batch)['mask']
+
+        for image_id, prediction in zip(ids, predictions):
+            prediction = prediction.round().int().cpu().numpy().astype("uint8")
+            profile = test_dataset.read_image_profile(image_id)
+            dst_path = os.path.join(dst_sliced_dir, image_id)
+            write_tile(dst_path, prediction, profile, compress="lzw", driver="GTiff")
+
+
+if __name__ == "__main__":
+    
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--configs', nargs="+", required=True, type=str)
+    parser.add_argument('--dst_dir', type=str, required=True)
+    parser.add_argument('--gpu', type=str, default='0')
+    parser.add_argument('--batch_size', type=int, default=8)
+    args = parser.parse_args()
+    print(args)
+
+    main(args)
+
+    os._exit(0)

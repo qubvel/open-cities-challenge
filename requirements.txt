@@ -8,3 +8,4 @@ shapely==1.7.0
 aeronet==0.0.7
 scikit-learn==0.22.2
 pandas==1.0.3
+ttach==0.0.2
