@@ -70,7 +70,7 @@ class TestSegmentationDataset(Dataset):
 
     def __init__(self, images_dir, transform_name=None):
         super().__init__()
-        self.ids = os.listdir(iamges_dir)
+        self.ids = os.listdir(images_dir)
         self.images_dir = images_dir
         self.transform = transforms.__dict__[transform_name] if transform_name else None
 
@@ -96,3 +96,8 @@ class TestSegmentationDataset(Dataset):
             image = f.read()[:3]
         image = image.transpose(1, 2, 0)
         return image
+
+    def read_image_profile(self, id):
+        path = os.path.join(self.images_dir, id)
+        with rasterio.open(path) as f:
+            return f.profile

@@ -1,18 +1,19 @@
 import os
 import glob
+import argparse
 import rasterio
 import numpy as np
 
 from .cut_train import sample, generate_samples, save_raster
 
 
-def main(path_pattern, masks_dir, dst_dir, size=1024):
+def main(images_dir, masks_dir, dst_dir, size=1024):
     
     size = (size, size)
 
     # collect images file paths
-    image_paths = sorted(os.listdir(images_dir))
-    mask_paths = sorted(os.listdir(masks_dir))
+    image_paths = sorted(glob.glob(os.path.join(images_dir, "*.tif")))
+    mask_paths = sorted(glob.glob(os.path.join(masks_dir, "*.tif")))
 
     # prepare output dirs
     dst_image_dir = os.path.join(dst_dir, "images")
@@ -29,10 +30,9 @@ def main(path_pattern, masks_dir, dst_dir, size=1024):
         assert os.path.basename(image_path) == os.path.basename(mask_path)
 
         # open rasters and generate samples according to specified size
-        with (
-            rasterio.open(image_path) as image_src, 
-            rasterio.open(mask_path) as mask_src,
-        ):  
+        with rasterio.open(image_path) as image_src, \
+             rasterio.open(mask_path) as mask_src: 
+
             # check dimentions is the same
             assert image_src.height == mask_src.height
             assert image_src.width == mask_src.width
@@ -43,7 +43,7 @@ def main(path_pattern, masks_dir, dst_dir, size=1024):
                 mask, mask_profile = mask_data
 
                 image = image[:3]  # take only 3 RGB channels
-                if image.sum() > 100:  # prevent empty masks
+                if image.sum() > 100:  # prevent empty (only nodata) images and masks
                     i += 1
                     dst_name = "{}_{}.tif".format(name, str(i).zfill(5))
                     dst_image_path = os.path.join(dst_image_dir, dst_name)

@@ -129,13 +129,14 @@ def main(args):
         blockxsize=256, blockysize=256, tiled=True, BIGTIFF='IF_NEEDED',
     )
 
+    print("Inference for big tif files...")
     filesnames = os.listdir(src_stitched_dir)
     for filename in filesnames:
         _src_path = os.path.join(src_stitched_dir, filename)
         _dst_path = os.path.join(dst_stitch_dir, filename)
         predictor(_src_path, _dst_path)
 
-    # slice files
+    print("Slicing big tif files to original test size...")
     df = pd.read_csv(args.test_csv)
     df = df[df.cluster_id != -1]
     cluster_ids = df.cluster_id.unique()
@@ -148,6 +149,7 @@ def main(args):
                     pass
 
     # predict not stitched data
+    print("Predicting small tif files...")
     test_dataset = TestSegmentationDataset(src_sliced_dir, transform_name='test_transform_1')
     test_dataloader = torch.utils.data.DataLoader(
         test_dataset, batch_size=args.batch_size, pin_memory=True, num_workers=8,
