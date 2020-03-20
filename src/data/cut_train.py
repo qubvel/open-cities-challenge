@@ -13,7 +13,7 @@ def sample(raster, y, x, height, width):
     Read sample of of band to memory with specified:
         x, y - pixel coordinates of left top corner
         width, height - spatial dimension of sample in pixels
-    Return: `Sample` object
+    Return: raster, profile
     """
 
     coord_x = raster.transform.c + x * raster.transform.a
@@ -46,7 +46,7 @@ def generate_samples(raster, width, height):
 
 
 def save_raster(path, raster, **profile):
-    """Save raster to disk"""
+    """Save raster on disk"""
     c, h, w = raster.shape
     _profile = dict(
         driver="GTiff",
@@ -112,5 +112,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(path_pattern=args.path_pattern, dst_dir=args.dst_dir, size=args.sample_size)
-
-    # main('../data/train_tier_2/*/*/*_010.tif', '../data/train_t2/small_1024/')
