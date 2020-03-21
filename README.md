@@ -61,7 +61,7 @@ $ make clean
 
 ### In depth view
 
-Before start please make sure:  
+Before start, please, make sure:  
 1. You clone the repo and have specified [requirements](#requirements)
 2. Put data (`train_tier_1.tgz` and `test.tgz`) in `data/raw/` folder
 3. Optionally downoad and extract pretrained models (`models/`)
@@ -87,7 +87,9 @@ The whole structure is as follows:
 
 After whole pipeline execution final prediction will appear in `data/predictions/stage3/sliced/` directory. In case you have pretrained models you can run just `stage 0 step 0` and `stage 3 step 3` blocks.
 
+---
 #### Stage 0.
+---
 
 Command to run:  
 ```bash
@@ -97,8 +99,9 @@ $ make stage0
 Consist of one step - prepraing `test.tgz` data. 
 We will extract data and create mosaic from test tiles (it is better to stitch separate tiles into one big image, so prediction network will have more context). CSV file with data about mosaic is located in `data/processed/test_mosaic.csv` and created by jyputer notebook (`notebooks/mosaic.ipynb`). You dont need to generate it again, it is already exist.
 
-
+---
 #### Stage 1.
+---
 
 Train data preparation, models training and prediction with ensemble of models (consist of three steps).     
 
@@ -123,11 +126,11 @@ On this step 10 `Unet` models are going to be trained on data. 5 Unet models for
 
 ##### Step 3.
 
-Pretrained models aggregeated to `EnsembleModel` with test time augmentation (flip, rotate90) - all predicitons averaged by simple mean and thresholded by 0.5 value.  
-First, prediction is made for stitched test images, than for others (which not present on mosaic).
+Pretrained models aggregeated to `EnsembleModel` with test time augmentation (flip, rotate90) - all predicitons averaged by simple mean and thresholded by 0.5 value. First, prediction is made for stitched test images, than for others (which not present on mosaic).
 
-
+---
 #### Stage 2.
+---
 
 Train data preparation (add pseudolabels), models training and prediction with ensemble of models (consist of three steps).     
 
@@ -136,3 +139,48 @@ Command to run:
 ```bash
 $ make stage2
 ```
+
+##### Step 1.
+
+Take predictions from previous stage and prepare them to use as training data for current stage. This technique is called pseudolabeling (when we use models prediction for training). I used all test data because leadeboard score was high enough (~0.845 jaccard score), but usually you should take only confident predictions.
+
+##### Step 2.
+
+(same as stage 1 step 1, but with exta data labeled on previous stage)
+
+On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with couninious leraining rate decay from 0.0001 to 0.
+
+##### Step 3.
+
+(same as stage 1 step 1)
+
+Pretrained models aggregeated to `EnsembleModel` with test time augmentation (flip, rotate90) - all predicitons averaged by simple mean and thresholded by 0.5 value. First, prediction is made for stitched test images, than for others (which not present on mosaic).
+
+---
+#### Stage 3.
+---
+
+The stage is the same as previous one, just another round of pseudolabelng with better trained models.   
+Train data preparation (pseudolabels), models training and prediction with ensemble of models (consist of three steps).     
+
+
+Command to run:  
+```bash
+$ make stage3
+```
+
+##### Step 1.
+
+Take predictions from previous stage and prepare them to use as training data for current stage (same as stage 2 step 1). 
+
+##### Step 2.
+
+(same as stage 2 step 1, but with exta data labeled on previous stage)
+
+On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with couninious leraining rate decay from 0.0001 to 0.
+
+##### Step 3.
+
+(same as stage 2 step 1)
+
+Pretrained models aggregeated to `EnsembleModel` with test time augmentation (flip, rotate90) - all predicitons averaged by simple mean and thresholded by 0.5 value. First, prediction is made for stitched test images, than for others (which not present on mosaic).
