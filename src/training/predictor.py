@@ -22,7 +22,7 @@ class Predictor:
         )
 
     def write(self, dst, data, x, y):
-        # print(x, y)
+        
         if np.all(data == 0):
             return
 
