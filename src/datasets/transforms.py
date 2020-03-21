@@ -1,5 +1,7 @@
+import warnings
 import albumentations as A
 
+warnings.simplefilter("ignore")
 
 # --------------------------------------------------------------------
 # Helpful functions
