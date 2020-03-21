@@ -27,7 +27,7 @@ data:
     name: SegmentationDataset
     init_params:
       images_dir: ./data/processes/stage3/images
-      masks_dir: ./data/test_pseudo/stage3/masks
+      masks_dir: ./data/processes/stage3/masks
       transform_name: train_transform_4
 
   valid_dataset:
