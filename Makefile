@@ -25,22 +25,22 @@ clean:
 
 # Prepare test data
 stage0:
-	docker exec open-cities-dev scripts/stage0_step0_prepare.sh
+	docker exec open-cities-dev bash scripts/stage0_step0_prepare.sh
 
 # Execute stage 1 (data preparation, models training, prediction)
 stage1: stage1-step1 stage1-step2 stage1-step3
 
 # Extract initial data, reproject, generate raster masks from vector geojson data
 stage1-step1:
-	docker exec open-cities-dev scripts/stage1_step1_prepare.sh
+	docker exec open-cities-dev bash scripts/stage1_step1_prepare.sh
 
 # Train 10 models on prepared data
 stage1-step2:
-	docker exec open-cities-dev scripts/stage1_step2_train.sh
+	docker exec open-cities-dev bash scripts/stage1_step2_train.sh
 
 # Make prediction for test data
 stage1-step3:
-	docker exec open-cities-dev scripts/stage1_step3_predict.sh
+	docker exec open-cities-dev bash scripts/stage1_step3_predict.sh
 
 
 # Execute stage 2 (data preparation, models training, prediction)
@@ -48,15 +48,15 @@ stage2: stage2-step1 stage2-step2 stage2-step3
 
 # Cut predictions from stage 1 and add them to training data (so called pseudo labeling)
 stage2-step1:
-	docker exec open-cities-dev scripts/stage2_step1_prepare.sh
+	docker exec open-cities-dev bash scripts/stage2_step1_prepare.sh
 
 # Train 10 models on prepared data (tier 1 + test predictions from stage 1)
 stage2-step2:
-	docker exec open-cities-dev scripts/stage2_step2_train.sh
+	docker exec open-cities-dev bash scripts/stage2_step2_train.sh
 
 # Make prediction for test data
 stage2-step3:
-	docker exec open-cities-dev scripts/stage2_step3_predict.sh
+	docker exec open-cities-dev bash scripts/stage2_step3_predict.sh
 
 
 # Execute stage 3 (data preparation, models training, prediction)
@@ -64,12 +64,12 @@ stage3: stage3-step1 stage3-step2 stage3-step3
 
 # Cut predictions from stage 2 and add them to training data (so called pseudo labeling)
 stage3-step1:
-	docker exec open-cities-dev scripts/stage3_step1_prepare.sh
+	docker exec open-cities-dev bash scripts/stage3_step1_prepare.sh
 
 # Train 5 models on prepared data (tier 1 + test predictions from stage 2)
 stage3-step2:
-	docker exec open-cities-dev scripts/stage3_step2_train.sh
+	docker exec open-cities-dev bash scripts/stage3_step2_train.sh
 
 # Make prediction for test data
 stage3-step3:
-	docker exec open-cities-dev scripts/stage3_step3_predict.sh
+	docker exec open-cities-dev bash scripts/stage3_step3_predict.sh
