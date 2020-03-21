@@ -22,6 +22,7 @@ Description
         - [Step 1.](#step-1-2)
         - [Step 2.](#step-2-2)
         - [Step 3.](#step-3-2)
+- [Your data prediction](#your-data-prediction)
 
 ## Requirements
 
@@ -56,7 +57,7 @@ $ make build && make start && make install
 
 **Step 2. Starting pipelines inside container**
 
-Start only inference (`models/` dir should be provided with pretrained models)
+Start only inference (`models/` directory should be provided with pretrained models)
 ```bash
 $ make inference
 ```
@@ -200,3 +201,26 @@ On this step 4 `Unet` models and 1 `FPN` are going to be trained on `tier 1` dat
 (same as stage 2 step 1)
 
 Pretrained models aggregeated to `EnsembleModel` with test time augmentation (flip, rotate90) - all predicitons averaged by simple mean and thresholded by 0.5 value. First, prediction is made for stitched test images, than for others (which not present on mosaic).
+
+
+## Your data prediction
+
+1. Start service ```$ make build && make start && make install```
+2. Put your `.tif` file somewhere in data folder (make sure you reproject it in UTM zone and resample to 0.1 m/pixel). You can use GDAL for example.
+3. Run prediction
+
+```bash
+$ docker exec open-cities-dev \
+    python -m src.predict_tif \
+      --configs configs/stage3-srx50-2-f0.yaml \
+      --src_path <path/to/your/tif/file.tif> \
+      --dst_path <path/for/result.tif> \
+      --batch_size 8 \
+      --gpu 0 \
+      --tta
+```
+
+4. For help:  
+```bash 
+$ docker exec open-cities-dev python -m src.predict_tif --help
+```
