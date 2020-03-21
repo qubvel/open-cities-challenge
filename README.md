@@ -4,9 +4,28 @@ Description
 
 ## Table of content
 
+- [Requirements](#requirements)
+    - [Software](#software)
+    - [Hardware](#hardware)
+- [Pipeline short summary](#pipeline-short-summary)
+- [Pipeline in-depth view](#pipeline-in-depth-view)
+    - [Stage 0.](#stage-0)
+    - [Stage 1.](#stage-1)
+        - [Step 1.](#step-1)
+        - [Step 2.](#step-2)
+        - [Step 3.](#step-3)
+    - [Stage 2.](#stage-2)
+        - [Step 1.](#step-1-1)
+        - [Step 2.](#step-2-1)
+        - [Step 3.](#step-3-1)
+    - [Stage 3.](#stage-3)
+        - [Step 1.](#step-1-2)
+        - [Step 2.](#step-2-2)
+        - [Step 3.](#step-3-2)
+
 ## Requirements
 
-#### Software:
+#### Software
 
 - Docker (19.03.6, build 369ce74a3c)
 - Docker-Compose (1.24.0-rc1, build 0f3d4dda)
@@ -24,15 +43,12 @@ Recommended minimal configuration:
 
 \* - during inference it is possible to reduce batch size to reduce memory consumption, however training configuration need at least 16GB.
 
----
 
-## Instructions
-
-### Short summary
+## Pipeline short summary
 
 **Step1. Starting service**
 
-Building docker image, start docker-compose service in daemon mode and install requirements inside container.
+Build docker image, start docker-compose service in daemon mode and install requirements inside container.
 
 ```bash
 $ make build && make start && make install
@@ -40,7 +56,7 @@ $ make build && make start && make install
 
 **Step 2. Starting pipelines inside container**
 
-Start inference (`models/` dir should be provided with pretrained models)
+Start only inference (`models/` dir should be provided with pretrained models)
 ```bash
 $ make inference
 ```
@@ -59,7 +75,7 @@ After everything is done stop docker container
 $ make clean
 ```
 
-### In depth view
+## Pipeline in-depth view
 
 Before start, please, make sure:  
 1. You clone the repo and have specified [requirements](#requirements)
@@ -96,8 +112,8 @@ Command to run:
 $ make stage0
 ```
 
-Consist of one step - prepraing `test.tgz` data. 
-We will extract data and create mosaic from test tiles (it is better to stitch separate tiles into one big image, so prediction network will have more context). CSV file with data about mosaic is located in `data/processed/test_mosaic.csv` and created by jyputer notebook (`notebooks/mosaic.ipynb`). You dont need to generate it again, it is already exist.
+Consist of one step - preparaing `test.tgz` data. 
+We will extract data and create mosaic from test tiles (it is better to stitch separate tiles into big images (scenes), so prediction network will have more context). CSV file with data about mosaic is located in `data/processed/test_mosaic.csv` and created by jyputer notebook (`notebooks/mosaic.ipynb`). You dont need to generate it again, it is already exist.
 
 ---
 #### Stage 1.
@@ -122,7 +138,7 @@ Prepraing data:
 
 ##### Step 2.
 
-On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with couninious leraining rate decay from 0.0001 to 0.
+On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with continious learining rate decay from 0.0001 to 0.
 
 ##### Step 3.
 
@@ -148,7 +164,7 @@ Take predictions from previous stage and prepare them to use as training data fo
 
 (same as stage 1 step 1, but with exta data labeled on previous stage)
 
-On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with couninious leraining rate decay from 0.0001 to 0.
+On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with continious learining rate decay from 0.0001 to 0.
 
 ##### Step 3.
 
@@ -177,7 +193,7 @@ Take predictions from previous stage and prepare them to use as training data fo
 
 (same as stage 2 step 1, but with exta data labeled on previous stage)
 
-On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with couninious leraining rate decay from 0.0001 to 0.
+On this step 4 `Unet` models and 1 `FPN` are going to be trained on `tier 1` data and `pseudolabels round 2`. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with continious learining rate decay from 0.0001 to 0.
 
 ##### Step 3.
 
