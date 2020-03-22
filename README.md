@@ -1,6 +1,14 @@
-# Open Cities
+# Open Cities AI Challenge: Segmenting Buildings for Disaster Resilience
 
-Description
+This is the code for winning solution for ["Open Cities AI Challenge: Segmenting Buildings for Disaster Resilience"](https://www.drivendata.org/competitions/60/building-segmentation-disaster-resilience). 
+
+Semantic Segmentation track: Build models to identify building footprints from aerial imagery across diverse African cities.
+
+My solution is based on Unet-like CNN models and below you will find description of full pipeline and instructions how to run training, inference on competitions data or inference on your own data.   
+
+Archive with pretrained models could be loaded [here](https://drive.google.com/file/d/1Zn2BR2vgzGzS6FjAzT-ymAWKbSFeY0Qx/view?usp=sharing) (Google Drive).
+
+Solution have been packed using Docker to simplify environment preparation.  
 
 ## Table of content
 
@@ -56,6 +64,28 @@ $ make build && make start && make install
 ```
 
 **Step 2. Starting pipelines inside container**
+
+
+Data preparation 
+
+ - Put competition data to 'data/raw/' (`train_tier_1.tgz` and `test.tgz` required)
+ - Load models archive [here](https://drive.google.com/file/d/1Zn2BR2vgzGzS6FjAzT-ymAWKbSFeY0Qx/view?usp=sharing) and extract to `models/` directory
+
+```
+<project_dir>/
+  data/
+    ...
+    raw/
+      train_tier_1.tgz
+      test.tgz
+  models/
+    stage1/
+      ...
+    stage2/
+      ...
+    stage3/
+      ...
+```
 
 Start only inference (`models/` directory should be provided with pretrained models)
 ```bash
@@ -139,7 +169,7 @@ Prepraing data:
 
 ##### Step 2.
 
-On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with continious learining rate decay from 0.0001 to 0.
+On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training lasts 50 epochs with continious learining rate decay from 0.0001 to 0.
 
 ##### Step 3.
 
@@ -165,7 +195,7 @@ Take predictions from previous stage and prepare them to use as training data fo
 
 (same as stage 1 step 1, but with exta data labeled on previous stage)
 
-On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with continious learining rate decay from 0.0001 to 0.
+On this step 10 `Unet` models are going to be trained on data. 5 Unet models for `eficientnet-b1` encoder and 5 for `se_resnext_32x4d` encoder (all encoders are pretrained on Imagenet). We train 5 models for each encoder because of 5 folds validation scheme. Models trained with hard augmentations using `albumetations` library and random data sampling. Trainings last 50 epochs with continious learining rate decay from 0.0001 to 0.
 
 ##### Step 3.
 
@@ -194,7 +224,7 @@ Take predictions from previous stage and prepare them to use as training data fo
 
 (same as stage 2 step 1, but with exta data labeled on previous stage)
 
-On this step 4 `Unet` models and 1 `FPN` are going to be trained on `tier 1` data and `pseudolabels round 2`. Models trained with hard augmentations using `albumetations` library and random data sampling. Training last 50 epochs with continious learining rate decay from 0.0001 to 0.
+On this step 4 `Unet` models and 1 `FPN` are going to be trained on `tier 1` data and `pseudolabels round 2`. Models trained with hard augmentations using `albumetations` library and random data sampling. Training lasts 50 epochs with continious learining rate decay from 0.0001 to 0.
 
 ##### Step 3.
 
